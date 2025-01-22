@@ -10,6 +10,6 @@ $\tau_{0} = \kappa_{0} \frac{\Sigma}{\sqrt{8 \pi}}$, $\kappa_{0} = 2 \cdot 10^{-
 
 with the equilibrium temperature, from equating $Q_{irr} = Q_{surf}$:
 
-$T=\left( (1- \epsilon) \frac{L_{*}}{4 \pi \sigma_{SB}}  \frac{2}{7} \sqrt{\frac{\mathcal{R}}{\mu G M_{*}}}\, \right)^{2/7} r^{-3/7}$
+$ T=\left( (1- \epsilon) \frac{L_{*}}{4 \pi \sigma_{SB}}  \frac{2}{7} \sqrt{\frac{\mathcal{R}}{\mu G M_{*}}}\, \right)^{2/7} r^{-3/7} $
 
 There have been changes made in parameters.h, parameters.cpp, SourceEuler.cpp
