@@ -88,6 +88,19 @@ extern bool cooling_scurve_type;
 
 
 
+//Additional beta cooling from Ziampras 2023
+
+// controlls if the ccoling is activated
+extern bool cooling_beta_ziampras2023;  
+
+// controlls which if the methods is activated: surf, mid, tot or no
+extern bool cooling_beta_surf;
+extern bool cooling_beta_mid;
+extern bool cooling_beta_tot;
+
+// betac cooling as approximation for Q_surf
+extern bool approx_beta_surf;
+
 
 
 
