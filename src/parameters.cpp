@@ -86,6 +86,15 @@ bool cooling_beta_floor;
 bool cooling_scurve_enabled;
 bool cooling_scurve_type;
 
+// controlls if the ccoling is activated
+bool cooling_beta_ziampras2023;  
+
+// controlls which if the methods is activated: surf, mid, tot or no
+bool cooling_beta_surf;
+bool cooling_beta_mid;
+bool cooling_beta_tot;
+
+
 t_initialize_condition sigma_initialize_condition;
 std::string sigma_filename;
 int random_seed;
@@ -437,12 +446,16 @@ static void read_opacity_config(){
 
 static void read_beta_cooling_config(){
 	cooling_beta_enabled = config::cfg.get_flag("CoolingBetaLocal", "No");
+	
+    cooling_beta_enabled = config::cfg.get_flag("CoolingBetaZiampras2023", "No");
 
     cooling_beta = config::cfg.get<double>("CoolingBeta", 1.0);
+
 
     units::precise_unit T0 = units::T0;
     cooling_beta_ramp_up =
 	config::cfg.get<double>("CoolingBetaRampUp", 0.0, T0);
+
 
 	cooling_beta_reference = false;
 	cooling_beta_model = false;
@@ -459,8 +472,27 @@ static void read_beta_cooling_config(){
 	} else {
 		throw std::runtime_error("Invalid choice for cooling beta reference: " + str);
 	}
+	
+	//include cooling from Ziampras 2023 and nonconstant
+	
+	cooling_beta_surf = false;
+        cooling_beta_mid = false;
+        cooling_beta_tot = false;
 
-}
+        const std::string str_ziampras = config::cfg.get_lowercase("CoolingBetaZiampras2023Method", "no");
+	    if (str_ziampras == "no") {
+	    } else if (str_ziampras == "surf") {
+		    cooling_beta_surf = true;
+	    } else if (str_ziampras == "mid") {
+		    cooling_beta_mid = true;
+	    } else if (str_ziampras == "tot") {
+		    cooling_beta_tot = true;
+		} else {
+		    throw std::runtime_error("Invalid choice for cooling beta Ziampras Method: " + str_ziampras);
+	    }
+    
+
+}	
 
 static void read_radiation_config() {
 
