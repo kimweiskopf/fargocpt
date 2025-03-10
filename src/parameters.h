@@ -33,6 +33,8 @@ extern double cps;
 extern int ShockTube;
 extern bool SpreadingRing;
 
+extern bool indirect_term_disk_on_disk;
+
 // energy euations
 extern bool Adiabatic;
 extern bool Polytropic;
