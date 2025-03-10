@@ -635,6 +635,7 @@ static void thermal_relaxation(t_data &data, const double current_time) {
 	const unsigned int Nr = Qminus.get_max_radial(); // = Size - 1
 	const unsigned int Nphi = Qminus.get_size_azimuthal();
 
+
 	#pragma omp parallel for collapse(2)
 	for (unsigned int nr = 1; nr < Nr; ++nr) {
 		for (unsigned int naz = 0; naz < Nphi; ++naz) {
@@ -651,8 +652,101 @@ static void thermal_relaxation(t_data &data, const double current_time) {
 			1 - std::exp(-std::pow(2 * t / t_ramp_up, 2));
 		    beta_inv = beta_inv * ramp_factor;
 		}
-
+		
+                
 		double delta_E = E;
+		
+		if (parameters::cooling_beta_surf) {
+		
+		  const double kappa = data[t_data::KAPPA](nr, naz);
+		  
+		    const double sigma =
+			data[t_data::SIGMA](nr, naz);
+		    const double temperature = data[t_data::TEMPERATURE](nr, naz);
+		    
+		  const double tau= 0.5 * kappa * sigma;
+
+		  // Q = factor 2 sigma_sb T^4 / tau_eff
+		  const double factor = parameters::surface_cooling_factor;
+		  const double sigma_sb = constants::sigma.get_code_value();
+		  const double T4 = std::pow(temperature, 4);
+		  const double tau_eff = 3*tau/8 + std::pow(3,1/2)/4 +1/(4*tau);
+
+		  const double qminus =
+		      factor * 2 * sigma_sb * T4 / tau_eff;
+		    
+		    
+		    // beta_surf = Sigma * e * Omega_K / |Q_cool|
+		    beta_inv= std::fabs(qminus)/ (E *omega_k);
+		}
+		
+		
+		if (parameters::cooling_beta_mid) {
+		    
+		    const double rho = data[t_data::RHO](nr, naz);
+		    const double kappa = data[t_data::KAPPA](nr, naz);
+
+		    
+		    const double temperature = data[t_data::TEMPERATURE](nr, naz);
+		    const double sigma_sb = constants::sigma.get_code_value();
+		    const double mu = pvte::get_mu(data, nr, naz);
+		    const double gamma_eff = pvte::get_gamma_eff(data, nr, naz);
+		    const double Rgas = constants::R.get_code_value();
+		    const double c_v =  std::pow(mu/ Rgas * (gamma_eff - 1.0) ,-1);
+	            
+	            //eta = 16 sigma_SB * T**3 / ( 3* kappa* rho**2 c_V)
+		    const double eta = 16*sigma_sb * std::pow(temperature, 3) /( 3*c_v*kappa * std::pow(rho,2) );
+		    const double lrad = 1 / (rho  * kappa ); // compute your characteristic photon diffusion length locally for the computations 
+		    const double H = data[t_data::SCALE_HEIGHT](nr, naz);
+		    
+		    
+		    // beta mid = Omega_K /eta (H**2 + lrad**2 /3) , eta = 16 sigma_SB * T**3 / ( 3* kappa* rho**2 c_V)
+		    beta_inv= std::pow( omega_k/eta * ( std::pow(H,2) + std::pow(lrad, 2)/3), -1) ;
+		}
+		
+		
+		if (parameters::cooling_beta_tot) {
+		
+		    const double rho = data[t_data::RHO](nr, naz);
+		    const double sigma =
+			data[t_data::SIGMA](nr, naz);
+		    const double temperature = data[t_data::TEMPERATURE](nr, naz);
+		    
+		    const double kappa = data[t_data::KAPPA](nr, naz);
+	
+                  const double tau= 0.5 * kappa * sigma;
+
+		  // Q = factor 2 sigma_sb T^4 / tau_eff
+		  const double factor = parameters::surface_cooling_factor;
+		  const double sigma_sb = constants::sigma.get_code_value();
+		  const double T4 = std::pow(temperature, 4);
+		  const double tau_eff =3*tau/8 + std::pow(3,1/2)/4 +1/(4*tau);
+
+		  const double qminus =
+		      factor * 2 * sigma_sb * T4 / tau_eff;
+		    
+		  // beta_surf = Sigma * e * Omega_K / |Q_cool|
+		  const double beta_surf= std::fabs(qminus)/ (E *omega_k);
+		 
+		  const double mu = pvte::get_mu(data, nr, naz);
+		  const double gamma_eff = pvte::get_gamma_eff(data, nr, naz);
+		  const double Rgas = constants::R.get_code_value();
+		  const double c_v =  std::pow(mu/ Rgas * (gamma_eff - 1.0) ,-1);
+	            
+	          //eta = 16 sigma_SB * T**3 / ( 3* kappa* rho**2 c_V)
+		  const double eta = 16*sigma_sb * std::pow(temperature, 3) /( 3*c_v*kappa * std::pow(rho,2) );
+		  const double lrad = 1 / (rho  * kappa ); // compute your characteristic photon diffusion length locally for the computations 
+		  const double H = data[t_data::SCALE_HEIGHT](nr, naz);
+		    
+		    
+		  // beta mid = Omega_K /eta (H**2 + lrad**2 /3) , eta = 16 sigma_SB * T**3 / ( 3* kappa* rho**2 c_V)
+		  const double beta_mid= std::pow( omega_k/eta * ( std::pow(H,2) + std::pow(lrad, 2)/3), -1) ;
+		 
+		  beta_inv = beta_surf + beta_mid;
+	
+		}
+		
+		
 		if (parameters::cooling_beta_reference) {
 		    const double sigma =
 			data[t_data::SIGMA](nr, naz);
@@ -662,6 +756,7 @@ static void thermal_relaxation(t_data &data, const double current_time) {
 			data[t_data::ENERGY0](nr, naz);
 		    delta_E -= E0 / sigma0 * sigma;
 		}
+		
 		if (parameters::cooling_beta_model) {
 		    const double sigma =
 			data[t_data::SIGMA](nr, naz);
@@ -681,13 +776,15 @@ static void thermal_relaxation(t_data &data, const double current_time) {
 						  constants::R / (gamma_eff - 1.0);
 		    delta_E -= minimum_energy;
 		}
+
 		const double qminus = delta_E * omega_k * beta_inv;
-
-
+	
+                
 		Qminus(nr, naz) += qminus;
 	    }
 	}
 }
+
 
 
 static void thermal_cooling(t_data &data) {
