@@ -47,6 +47,7 @@ unsigned int Nsnap;
 double quantities_radius_limit;
 double disk_radius_mass_fraction;
 
+bool indirect_term_disk_on_disk;
 
 double cps;
 
@@ -803,7 +804,26 @@ void read(const std::string &filename, t_data &data)
 		}
 	}
 
+// this code must come after self gravity is read
 
+	const std::string intdirect_term_disk_on_disk_string = config::cfg.get_lowercase("IndirectTermDiskOnDisk", "auto");
+	if (intdirect_term_disk_on_disk_string == "auto") {
+		indirect_term_disk_on_disk = self_gravity;
+ 
+	} else if (intdirect_term_disk_on_disk_string == "yes") {
+		indirect_term_disk_on_disk = true;
+ 
+	} else if (intdirect_term_disk_on_disk_string == "no") {
+		indirect_term_disk_on_disk = false;
+	} else {
+		logging::print_master(
+			LOG_ERROR
+
+			"Invalid choice for indirect term disk on disk: %s!\n", intdirect_term_disk_on_disk_string.c_str());
+
+		PersonalExit(1);;
+	}
+	
     body_force_from_potential =
 	config::cfg.get_flag("BodyForceFromPotential", "yes");
     if (body_force_from_potential) {
